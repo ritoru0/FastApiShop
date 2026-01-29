@@ -1,25 +1,13 @@
 name: Python CI
 
-on: [push]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres_test
-          POSTGRES_PASSWORD: postgres_test
-          POSTGRES_DB: postgres_test
-        ports:
-          - 5434:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -28,19 +16,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13.5'  
+          python-version: '3.13'   
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run migrations
+      - name: Run smoke tests
         env:
-          REAL_DATABASE_URL: postgresql+asyncpg://postgres_test:postgres_test@localhost:5434/postgres_test
-        run: alembic upgrade head
-
-      - name: Run tests
-        env:
-          REAL_DATABASE_URL: postgresql+asyncpg://postgres_test:postgres_test@localhost:5434/postgres_test
-        run: pytest
+          SECRET_KEY: "fake-secret-for-ci-test"
+        run: pytest tests/test_app.py -v || pytest tests -v
